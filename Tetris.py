@@ -1,5 +1,5 @@
 # essai modification git
-
+import numpy as np
 import pygame
 import random
 
@@ -394,6 +394,6 @@ def main_menu(win):
     pygame.display.quit()
 
 
-win = pygame.display.set_mode((Largeur_fenetre, Hauteur_fenetre))
-pygame.display.set_caption('Tetrisae')
-main_menu(win)
+#win = pygame.display.set_mode((Largeur_fenetre, Hauteur_fenetre))
+#pygame.display.set_caption('Tetrisae')
+#main_menu(win)

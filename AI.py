@@ -7,8 +7,6 @@ import Tetris as T
 import numpy as np
 import pygame
 
-
-
 def Run(config_file):
     # Load configuration.
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
@@ -25,10 +23,10 @@ def Run(config_file):
     p.add_reporter(neat.Checkpointer(5))
 
     # Run for up to 100 generations.
-    winner = p.run(evaluation_genome, 100)
+    winner = p.run(evaluation_genome, 10)
 
     # Display the winning genome.
-    # print('\nBest genome:\n{!s}'.format(winner))
+    print('\nBest genome:\n{!s}'.format(winner))
 
     node_names = {-2:'Gauche',
                   -1: 'Droite',
@@ -40,7 +38,7 @@ def Run(config_file):
     #visualize.plot_stats(stats, ylog=False, view=True)
     #visualize.plot_species(stats, view=True)
     p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-4')
-    p.run(evaluation_genome, 100)
+    p.run(evaluation_genome, 10)
 
 
 def plus_haut_bloc(grille):
@@ -68,22 +66,18 @@ def espace_perdu(grille):
 
 def evaluation_genome(genomes, config):
     pygame.init()
+    surface = pygame.display.set_mode((T.Largeur_fenetre, T.Hauteur_fenetre))
     positions_statiques = {}
     for pos in [[np.random.randint(0,10), np.random.randint(15,20)] for _ in range(40)]:
         p = (pos[0], pos[1])
         positions_statiques[p] = T.Tetriminos_couleur[0]
 
     grille = T.creation_grille(positions_statiques)
-
+    T.dessine_fenetre(surface, grille)
+    pygame.display.update()
     phb = plus_haut_bloc(grille)
     ep = espace_perdu(grille)
 
-    T.changement_tetrimino = False
-    T.run = True
-    temps = pygame.time.Clock()
-    temps_de_chute = 0
-    temps_de_jeu = 0
-    vitesse_chute = 0.33
 
 
     nets = []
@@ -98,43 +92,61 @@ def evaluation_genome(genomes, config):
         g.append(genome)
 
     for t in tetrimino_training:
-        output = nets[tetrimino_training.index(t)].activate((t.x,t.y,t.rotation))
-        while T.run:
+
+        Fin = False
+        run = True
+        temps = pygame.time.Clock()
+        temps_de_chute = 0
+        temps_de_jeu = 0
+        vitesse_chute = 0.22
+
+        while run :
+            output = nets[tetrimino_training.index(t)].activate((t.x, t.y, t.rotation))
             temps_de_chute += temps.get_rawtime()
             temps_de_jeu += temps.get_rawtime()
             temps.tick()
 
-            if temps_de_chute / 1000 > vitesse_chute:
+            #if temps_de_jeu / 1000 > 5:
+            #    temps_de_jeu = 0
+            #    if vitesse_chute > 0.12:
+            #        vitesse_chute -= 0.005
+
+            #for event in pygame.event.get():
+            #    if event.type == pygame.QUIT:
+            #        T.run = False
+
+
+            if temps_de_chute/1000 > vitesse_chute:
                 temps_de_chute = 0
                 t.y += 1
                 if not (T.espace_disponible(t, grille)) and t.y > 0:
                     t.y -= 1
-                    T.changement_tetrimino = True
-
-
-            if temps_de_jeu / 1000 > 5:
-                temps_de_jeu = 0
-                if vitesse_chute > 0.12:
-                    vitesse_chute -= 0.005
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                       T.run = False
+                    Fin = True
 
             if output[0] > 0.5:
                 t.x -= 1
-                g[tetrimino_training.index(t)].fitness -= 1
+                #g[tetrimino_training.index(t)].fitness += 0.5
                 if not (T.espace_disponible(t, grille)):
                     t.x += 1
+                    g[tetrimino_training.index(t)].fitness -= 0.1
             if output[1] > -1:
                 t.x += 1
+                #g[tetrimino_training.index(t)].fitness += 0.5
                 if not (T.espace_disponible(t, grille)):
                     t.x -= 1
+                    g[tetrimino_training.index(t)].fitness -= 0.1
             if output[2] > 0.5:
                 t.rotation += 1
+                #g[tetrimino_training.index(t)].fitness += 0.5
                 if not (T.espace_disponible(t, grille)):
                     t.rotation -= 1
-            output = nets[tetrimino_training.index(t)].activate((t.x, t.y, t.rotation))
+                    g[tetrimino_training.index(t)].fitness -= 0.1
+            #if output[3] > -1:
+            #    t.y += 1
+            #    g[tetrimino_training.index(t)].fitness += 1
+            #    if not (T.espace_disponible(t,grille)):
+            #        t.y -= 1
+            #        changement_tetrimino = True
 
 
             tetrimino_pos = T.conversion_format(t)
@@ -144,22 +156,23 @@ def evaluation_genome(genomes, config):
                 if y > -1:
                     grille[y][x] = t.couleur
 
-            if T.changement_tetrimino:
+            if Fin == True:
                 for pos in tetrimino_pos:
                     p = (pos[0], pos[1])
                     positions_statiques[p] = t.couleur
-                T.changement_tetrimino = False
+                Fin = False
                 g[tetrimino_training.index(t)].fitness += T.clear_rows(grille, positions_statiques) * 5
                 grille = T.creation_grille(positions_statiques)
                 if plus_haut_bloc(grille) < phb:
                     g[tetrimino_training.index(t)].fitness -= 1
                 if espace_perdu(grille) > ep:
                     g[tetrimino_training.index(t)].fitness -= 2
-                T.run = False
-
-        #T.dessine_fenetre(T.win, grille, score)
-        #T.dessine_prochaine_forme(prochain_tetrimino, T.win)
-        #pygame.display.update()
+                nets.pop(tetrimino_training.index(t))
+                g.pop(tetrimino_training.index(t))
+                tetrimino_training.pop(tetrimino_training.index(t))
+                run = False
+        T.dessine_fenetre(surface, grille)
+        pygame.display.update()
 
         #if check_lost(positions_statiques):
         #   dessine_texte_milieu("PERDU", 80, (255, 255, 255), win)
