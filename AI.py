@@ -23,7 +23,7 @@ def Run(config_file):
     p.add_reporter(neat.Checkpointer(5))
 
     # Run for up to 100 generations.
-    winner = p.run(evaluation_genome, 10)
+    winner = p.run(evaluation_genome, 1000)
 
     # Display the winning genome.
     print('\nBest genome:\n{!s}'.format(winner))
@@ -38,7 +38,7 @@ def Run(config_file):
     #visualize.plot_stats(stats, ylog=False, view=True)
     #visualize.plot_species(stats, view=True)
     p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-4')
-    p.run(evaluation_genome, 10)
+    p.run(evaluation_genome, 1000)
 
 
 def plus_haut_bloc(grille):
@@ -75,11 +75,6 @@ def evaluation_genome(genomes, config):
     grille = T.creation_grille(positions_statiques)
     T.dessine_fenetre(surface, grille)
     pygame.display.update()
-    phb = plus_haut_bloc(grille)
-    ep = espace_perdu(grille)
-
-
-
     nets = []
     tetrimino_training = []
     g = []
@@ -91,16 +86,17 @@ def evaluation_genome(genomes, config):
         tetrimino_training.append(T.obtenir_forme())
         g.append(genome)
 
-    for t in tetrimino_training:
+    Fin = False
+    run = True
+    while run and len(tetrimino_training) > 0 :
 
-        Fin = False
-        run = True
-        temps = pygame.time.Clock()
-        temps_de_chute = 0
-        temps_de_jeu = 0
-        vitesse_chute = 0.22
-
-        while run :
+        for t in tetrimino_training:
+            temps = pygame.time.Clock()
+            temps_de_chute = 0
+            temps_de_jeu = 0
+            vitesse_chute = 0.22
+            phb2 = 20
+            ep2 = 0
             output = nets[tetrimino_training.index(t)].activate((t.x, t.y, t.rotation))
             temps_de_chute += temps.get_rawtime()
             temps_de_jeu += temps.get_rawtime()
@@ -116,37 +112,39 @@ def evaluation_genome(genomes, config):
             #        T.run = False
 
 
-            if temps_de_chute/1000 > vitesse_chute:
+            if temps_de_chute > 0:
                 temps_de_chute = 0
                 t.y += 1
+                g[tetrimino_training.index(t)].fitness += 0.1
                 if not (T.espace_disponible(t, grille)) and t.y > 0:
                     t.y -= 1
                     Fin = True
 
             if output[0] > 0.5:
                 t.x -= 1
-                #g[tetrimino_training.index(t)].fitness += 0.5
+                g[tetrimino_training.index(t)].fitness += 0.1
                 if not (T.espace_disponible(t, grille)):
                     t.x += 1
                     g[tetrimino_training.index(t)].fitness -= 0.1
             if output[1] > -1:
                 t.x += 1
-                #g[tetrimino_training.index(t)].fitness += 0.5
+                g[tetrimino_training.index(t)].fitness += 0.1
                 if not (T.espace_disponible(t, grille)):
                     t.x -= 1
                     g[tetrimino_training.index(t)].fitness -= 0.1
             if output[2] > 0.5:
                 t.rotation += 1
-                #g[tetrimino_training.index(t)].fitness += 0.5
+                g[tetrimino_training.index(t)].fitness += 0.1
                 if not (T.espace_disponible(t, grille)):
                     t.rotation -= 1
                     g[tetrimino_training.index(t)].fitness -= 0.1
-            #if output[3] > -1:
-            #    t.y += 1
-            #    g[tetrimino_training.index(t)].fitness += 1
-            #    if not (T.espace_disponible(t,grille)):
-            #        t.y -= 1
-            #        changement_tetrimino = True
+
+            if output[3] > -1:
+                t.y += 1
+                g[tetrimino_training.index(t)].fitness += 10
+                if not (T.espace_disponible(t,grille)) and t.y > 0:
+                    t.y -= 1
+                    Fin = True
 
 
             tetrimino_pos = T.conversion_format(t)
@@ -157,22 +155,30 @@ def evaluation_genome(genomes, config):
                     grille[y][x] = t.couleur
 
             if Fin == True:
+                if t.y >= 10:
+                    g[tetrimino_training.index(t)].fitness += 50
+                phb,phb2 = phb2,plus_haut_bloc(grille)
+                ep,ep2 = ep2,espace_perdu(grille)
                 for pos in tetrimino_pos:
                     p = (pos[0], pos[1])
                     positions_statiques[p] = t.couleur
                 Fin = False
-                g[tetrimino_training.index(t)].fitness += T.clear_rows(grille, positions_statiques) * 5
+                g[tetrimino_training.index(t)].fitness += T.clear_rows(grille, positions_statiques) * 20
+                if T.clear_rows(grille, positions_statiques) > 0:
+                    print("Reussi")
                 grille = T.creation_grille(positions_statiques)
-                if plus_haut_bloc(grille) < phb:
-                    g[tetrimino_training.index(t)].fitness -= 1
-                if espace_perdu(grille) > ep:
-                    g[tetrimino_training.index(t)].fitness -= 2
-                nets.pop(tetrimino_training.index(t))
-                g.pop(tetrimino_training.index(t))
-                tetrimino_training.pop(tetrimino_training.index(t))
+                if phb2 > phb:
+                    #g[tetrimino_training.index(t)].fitness -= 10
+                    print("dmg")
+                #if ep2 > ep:
+                    #g[tetrimino_training.index(t)].fitness -= 20
+                #    print("ducon")
                 run = False
-        T.dessine_fenetre(surface, grille)
-        pygame.display.update()
+            T.dessine_fenetre(surface, grille)
+            pygame.display.update()
+        nets.pop(tetrimino_training.index(t))
+        g.pop(tetrimino_training.index(t))
+        tetrimino_training.pop(tetrimino_training.index(t))
 
         #if check_lost(positions_statiques):
         #   dessine_texte_milieu("PERDU", 80, (255, 255, 255), win)

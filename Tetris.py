@@ -271,6 +271,29 @@ def dessine_prochaine_forme(tetrimino, surface):
 
     surface.blit(label, (sx + 10, sy - 30))
 
+def plus_haut_bloc(grille):
+    ind = len(grille)
+    for j in range(len(grille)):
+        row = grille[j]
+        for espace in row:
+            if espace != (0,0,0):
+                return ind
+        ind -= 1
+    return ind
+
+def espace_perdu(grille):
+    count = 0
+    for j in range (19,plus_haut_bloc(grille)-1, -1):
+        row_inf = grille[j]
+        for espace in row_inf:
+            c = 0
+            for i in range(1, j):
+                if grille[j-i][row_inf.index(espace)] != (0,0,0):
+                    c += 1
+            if espace == (0,0,0) and c >= 1:
+                count += 1
+    return count
+
 
 def dessine_fenetre(surface, grille, score=0):
     surface.fill((0, 0, 0))
@@ -300,6 +323,8 @@ def dessine_fenetre(surface, grille, score=0):
 
 
 def main(win):
+    B = 20
+    ep2 = 0
     positions_statiques = {}
     grille = creation_grille(positions_statiques)
 
@@ -318,6 +343,7 @@ def main(win):
         temps_de_chute += temps.get_rawtime()
         temps_de_jeu += temps.get_rawtime()
         temps.tick()
+
 
         if temps_de_chute / 1000 > vitesse_chute:
             temps_de_chute = 0
@@ -361,6 +387,8 @@ def main(win):
                 grille[y][x] = tetrimino_actuel.couleur
 
         if changement_tetrimino:
+            A,B = B,plus_haut_bloc(grille)
+            ep,ep2 = ep2, espace_perdu(grille)
             for pos in tetrimino_pos:
                 p = (pos[0], pos[1])
                 positions_statiques[p] = tetrimino_actuel.couleur
@@ -368,13 +396,19 @@ def main(win):
             prochain_tetrimino = obtenir_forme()
             changement_tetrimino = False
             score += clear_rows(grille, positions_statiques) * 10
+            if B > A:
+                dessine_texte_milieu("PERDU", 80, (255, 255, 255), win)
+                pygame.display.update()
+                pygame.time.delay(1500)
+                run = False
+
 
         dessine_fenetre(win, grille, score)
         dessine_prochaine_forme(prochain_tetrimino, win)
         pygame.display.update()
 
         if check_lost(positions_statiques):
-            dessine_texte_milieu("PERDU", 80, (255, 255, 255), win)
+            dessine_texte_milieu("Perdu", 80, (255, 255, 255), win)
             pygame.display.update()
             pygame.time.delay(1500)
             run = False
