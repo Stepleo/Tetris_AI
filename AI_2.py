@@ -20,8 +20,8 @@ def Run(config_file):
                          config_file)
 
     # Create the population, which is the top-level object for a NEAT run.
+    #p = neat.checkpoint.Checkpointer.restore_checkpoint('neat-checkpoint-4')
     p = neat.Population(config)
-
     # Add a stdout reporter to show progress in the terminal.
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
@@ -34,7 +34,7 @@ def Run(config_file):
         corecount = Core
     pe = neat.ParallelEvaluator(corecount, evaluation_genome)
     # Run for up to 100 generations.
-    winner = p.run(pe.evaluate, 10)
+    winner = p.run(pe.evaluate, 1000)
 
     # Display the winning genome.
     print('\nBest genome:\n{!s}'.format(winner))
@@ -76,8 +76,8 @@ def verticalite(grille):
     c = 0
     for j in range (9):
         a,b = 0,0
-        column1 = grille[:][j]
-        column2 = grille[:][j]
+        column1 = [grille[i][j] for i in range(20)]
+        column2 = [grille[i][j+1] for i in range(20)]
         for espace in column1:
             if espace != (0,0,0):
                 a += 1
@@ -85,6 +85,17 @@ def verticalite(grille):
             if espace != (0,0,0):
                 b += 1
         c += abs(b-a)
+    return c
+
+def colonnes_vide(grille):
+    c = 0
+    for j in range(10):
+        a = 0
+        for i in [grille[k][j] for k in range(20)]:
+            if i != (0,0,0):
+                a += 1
+        if a != 0:
+            c += 1
     return c
 
 def voisin(tetrimino_pos,grille):
@@ -96,8 +107,8 @@ def voisin(tetrimino_pos,grille):
         V = [(x-1,y-1),(x,y-1),(x+1,y-1),(x+1,y),(x+1,y+1),(x,y+1),(x-1,y+1),(x-1,y)]
         for i in V:
             if i in tetrimino_pos:
-                pass
-            elif i not in position_valide:
+                continue
+            if i not in position_valide:
                 if i[1] > -1:
                     c+=1
         return c
@@ -127,7 +138,7 @@ def evaluation_genome(genome, config):
 
     phb2 = 20
     ta2 = 0
-    v2 = 200
+    nb_rotation = 0
     while run:
         grille = T.creation_grille(positions_statiques)
         temps_de_chute += temps.get_rawtime()
@@ -168,11 +179,15 @@ def evaluation_genome(genome, config):
                 tetrimino_actuel.x -= 1
                 fitness -= 1
 
-        if output[2] > 0.2:
-            tetrimino_actuel.rotation += 1
-            if not (T.espace_disponible(tetrimino_actuel, grille)):
-                tetrimino_actuel.rotation -= 1
-                fitness -= 1
+        if output[2] > 0.5:
+            if nb_rotation >= 20:
+                fitness -= 10
+            else:
+                tetrimino_actuel.rotation += 1
+                nb_rotation += 1
+                if not (T.espace_disponible(tetrimino_actuel, grille)):
+                    tetrimino_actuel.rotation -= 1
+                    fitness -= 1
 
         if output[3] > 0.1:
             tetrimino_actuel.y += 1
@@ -183,7 +198,7 @@ def evaluation_genome(genome, config):
 
         tetrimino_pos = T.conversion_format(tetrimino_actuel)
 
-        if voisin(tetrimino_pos,grille) >= 3:
+        if voisin(tetrimino_pos,grille) >= 5:
             fitness += 5
         else:
             fitness -= 1
@@ -196,7 +211,7 @@ def evaluation_genome(genome, config):
         if changement_tetrimino == True:
             phb, phb2 = phb2, plus_haut_bloc(grille)
             ta, ta2 = ta2, trous_ajoutees(grille)
-            v, v2 = v2, verticalite(grille)
+            nb_rotation = 0
             for pos in tetrimino_pos:
                 p = (pos[0], pos[1])
                 positions_statiques[p] = tetrimino_actuel.couleur
@@ -204,34 +219,26 @@ def evaluation_genome(genome, config):
             prochain_tetrimino = T.obtenir_forme()
             changement_tetrimino = False
 
-            if phb2 > phb:
-                fitness -= 1
-            elif phb2 <= phb:
-                fitness += 30
+            fitness -= max(0,ta2 - ta)*5
 
-            if ta2 > ta:
-                fitness -= 1
-            elif ta2 <= ta:
-                fitness += 10
+            fitness -= max(0,phb2 - phb)*20
 
-            if v2 > v:
-                fitness -= 1
-            elif v2 <= v:
-                fitness += 10
+            fitness -= verticalite(grille)*10
 
+            fitness -= colonnes_vide(grille)*10
 
             score += T.clear_rows(grille, positions_statiques)
             if T.clear_rows(grille, positions_statiques) > 0:
                 print("Reussi")
-            fitness += score * 100
+            fitness += score * 1000
 
         if T.check_lost(positions_statiques):
+            fitness += (time.time() - temps_debut)*100
             for j in grille:
-                if j != (0,0,0):
-                    fitness += 1
-                elif j == (0,0,0):
-                    fitness -= 0.1
-            #fitness += time.time() - temps_debut
+                if j ==(0,0,0):
+                    fitness -= 10
+                else:
+                    fitness += 20
             run = False
 
         T.dessine_fenetre(surface, grille)
@@ -247,3 +254,4 @@ if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
     chemin_config = os.path.join(local_dir, 'Configuration_AI')
     Run(chemin_config)
+
