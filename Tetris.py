@@ -250,6 +250,28 @@ def clear_rows(grille, positions_statiques):#cette fonction sert à éliminer le
                                                                            #à prendre
     return (inc)#on renvoie le nombre de lignes éliminées
 
+def test_clear_rows():
+    pygame.init()
+    surface = pygame.display.set_mode((Largeur_fenetre, Hauteur_fenetre))
+    positions_statiques = {}
+    #On génère une grille aléatoirement pour tester notre fonction dessus
+    for pos in [[np.random.randint(0, 10), np.random.randint(15, 20)] for _ in range(40)]:
+        p = (pos[0], pos[1])
+        positions_statiques[p] = Tetriminos_couleur[0]
+
+    grille = creation_grille(positions_statiques)
+    dessine_fenetre(surface, grille)
+    pygame.display.update()
+    nb_ligne_pleine = 0
+    for j in range(len(grille)):
+        row = grille[j]
+        if (0,0,0) not in row:
+            nb_ligne_pleine += 1
+    if clear_rows(grille,{}) == nb_ligne_pleine:
+        print(nb_ligne_pleine)
+        return True
+    else:
+        return False
 
 def dessine_prochaine_forme(tetrimino, surface): #cette fonction sert à la fois à dessiner le texte "Prochaine Forme" et à afficher le tétrimino qui suivra.
     police = pygame.font.SysFont('comicsans', 30)
@@ -427,7 +449,7 @@ def main_menu(win):
                 main(win)
     pygame.display.quit()
 
-
-#win = pygame.display.set_mode((Largeur_fenetre, Hauteur_fenetre))
-#pygame.display.set_caption('Tetrisae')
-#main_menu(win)
+#Lors de l'exécution des différentes IA, il faut ignorer les lignes suivantes sinon Tetrisae se lance et il faut fermer la fenêtre pour pouvoir lancer la simulation
+win = pygame.display.set_mode((Largeur_fenetre, Hauteur_fenetre))
+pygame.display.set_caption('Tetrisae')
+main_menu(win)
