@@ -1,17 +1,12 @@
 from __future__ import print_function
 import os
 import neat
-import visualize
 import Tetris as T
-import numpy as np
 import pygame
 import multiprocessing
 import time
 
 Core = 0
-
-
-
 
 def Run(config_file):
     # On charge la configuration qu'utilisera notre intelligence artificielle pour sa reproduction.
@@ -39,17 +34,6 @@ def Run(config_file):
     # On affiche le meilleur génome.
     print('\nBest genome:\n{!s}'.format(winner))
 
-    # node_names = {-2:'Gauche',
-    #-1: 'Droite',
-    #0: 'Rotation',
-    #1: 'Position_x',
-    #2: 'Postion_y',
-    #3: 'Position_alpha'}
-    # visualize.draw_net(config, winner, True, node_names=node_names)
-    # visualize.plot_stats(stats, ylog=False, view=True)
-    # visualize.plot_species(stats, view=True)
-    #p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-4')
-    #p.run(evaluation_genome, 1000)
 
 # Les 5 fonctions suivantes servent à déterminer l'évolution de la partie à chaque action de l'IA et donc à la noter plus tard.
 def plus_haut_bloc(grille):
@@ -150,12 +134,6 @@ def evaluation_genome(genome, config):
         output = net.activate((tetrimino_actuel.x, tetrimino_actuel.y, tetrimino_actuel.rotation))
 
 
-
-
-        # for event in pygame.event.get():
-        #    if event.type == pygame.QUIT:
-        #        T.run = False
-
         if temps_de_chute / 1000 > vitesse_chute:
             temps_de_chute = 0
             tetrimino_actuel.y += 1
@@ -163,10 +141,6 @@ def evaluation_genome(genome, config):
                 tetrimino_actuel.y -= 1
                 changement_tetrimino = True
 
-        if temps_de_jeu / 1000 > 5:
-           temps_de_jeu = 0
-           if vitesse_chute > 0.12:
-               vitesse_chute -= 0.005
 
         if output[0] > 0.5: #ce coeffcient de output est celui qui correspond à l'action d'aller à gauche donc si cette condition est remplie, l'IA essaye d'aller à gauche
             tetrimino_actuel.x -= 1
@@ -230,8 +204,6 @@ def evaluation_genome(genome, config):
             fitness -= colonnes_vide(grille)*10
 
             score += T.clear_rows(grille, positions_statiques)
-            if T.clear_rows(grille, positions_statiques) > 0:
-                print("Reussi")
             fitness += score * 1000 #on la récompense massivement si elle parvient à éliminer des lignes.
 
         if T.check_lost(positions_statiques):
@@ -246,6 +218,7 @@ def evaluation_genome(genome, config):
         T.dessine_fenetre(surface, grille)
         T.dessine_prochaine_forme(prochain_tetrimino,surface)
         pygame.display.update()
+        
     return fitness
 
 
