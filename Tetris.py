@@ -1,22 +1,7 @@
-# essai modification git
 import numpy as np
 import pygame
 import random
 
-# creating the data structure for pieces
-# setting up global vars
-# functions
-# - create_grid
-# - draw_grid
-# - draw_window
-# - rotating shape in main
-# - setting up the main
-
-"""
-10 x 20 square grid
-shapes: S, Z, I, O, J, L, T
-represented in order by 0 - 6
-"""
 
 pygame.font.init()
 
