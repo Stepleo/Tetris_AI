@@ -165,7 +165,8 @@ class Piece(object):
         self.couleur = Tetriminos_couleur[Tetriminos.index(tetrimino)]
         self.rotation = 0
 
-
+#Cette classe nous permet de définir toutes les caractéristiques de nos téttriminos: couleur, position, état de rotation...
+            
 def creation_grille(positions_statiques):
     grille = [[(0, 0, 0) for k in range(10)] for k in range(20)]
 
@@ -176,32 +177,40 @@ def creation_grille(positions_statiques):
                 grille[i][j] = c
     return grille
 
+#Cette fonction sert à créer notre grille qui n'est qu'une matrice de blocs noirs pour l'instant.
 
-def conversion_format(tetrimino):
+
+def conversion_format(tetrimino): #Cette fonction sert à transformer nos listes de zéros en véritables formes.
     positions = []
-    format = tetrimino.tetrimino[tetrimino.rotation % len(tetrimino.tetrimino)]
+    format = tetrimino.tetrimino[tetrimino.rotation % len(tetrimino.tetrimino)] #On associe à chaque tétrimino sa forme en fonction de son état de rotation, pour
+                                                                                #pour le I il n'y en a que deux, mais pour le T quatre. A chaque fois que l'on
+                                                                                #a tourné deux ou quatre fois on revient à la forme de base.
 
     for i, line in enumerate(format):
         row = list(line)
         for j, column in enumerate(row):
             if column == '0':
-                positions.append((tetrimino.x + j, tetrimino.y + i))
+                positions.append((tetrimino.x + j, tetrimino.y + i)) #Dès qu'un zéro apparaît cela signifie qu'il y a un bloc à afficher et donc on ajoute à la liste
+                                                                     #de positionnements de notre tétrimino.
 
     for i, pos in enumerate(positions):
-        positions[i] = (pos[0] - 2, pos[1] - 4)
+        positions[i] = (pos[0] - 2, pos[1] - 4) #On soustrait 2 et 4 pour déplacer vers le haut et vers la gauche notre tétrimino qui était décalé en raison de la
+                                                #définition en listes de celui-ci.
 
     return positions
 
 
-def espace_disponible(tetrimino, grille):
-    position_valide = [[(j, i) for j in range(10) if grille[i][j] == (0, 0, 0)] for i in range(20)]
-    position_valide = [j for sub in position_valide for j in sub]
+def espace_disponible(tetrimino, grille): #Cette fonction nous permet de déterminer quelles sont les positions disponibles dans notre grille pour le tétrimino
+    position_valide = [[(j, i) for j in range(10) if grille[i][j] == (0, 0, 0)] for i in range(20)] #Si le carreau (i,j) de notre grille est noir alors il n'y a 
+                                                                                                    #aucun tetrimino à cet endroit
+    position_valide = [j for sub in position_valide for j in sub] #On fait ça pour ne garder qu'une liste d'objets et pas une liste de listes.
 
     formate = conversion_format(tetrimino)
 
     for pos in formate:
-        if pos not in position_valide:
-            if pos[1] > -1:
+        if pos not in position_valide: #cette condition est pour vérifier que chacune de nos rotations de notre tétrimino est possible
+            if pos[1] > -1: #cette condition est pour empêcher de vérifier que la position est valide avant que le tétrimino n'apparaisse sur l'écran pour qu'il 
+                            #puisse tomber quoiqu'il arrive alors qu'il est au-dessus de la grille et donc apparaître dans la grille.
                 return False
     return True
 
@@ -209,22 +218,22 @@ def espace_disponible(tetrimino, grille):
 def check_lost(positions):
     for pos in positions:
         x, y = pos
-        if y < 1:
+        if y < 1: #Si le tétrimino est bloqué au-dessus de la grille, le joueur a perdu la partie
             return True
     return False
 
 
 def obtenir_forme():
-    return Piece(5, 0, random.choice(Tetriminos))
+    return Piece(5, 0, random.choice(Tetriminos)) 
 
 
 def dessine_texte_milieu(text, size, color, surface):
     police = pygame.font.SysFont("comicsans", size, bold=True)
     label = police.render(text, True, color)
-    surface.blit(label, (x0 + Largeur_jeu / 2 - (label.get_width() / 2), y0 + Hauteur_jeu / 2 - label.get_width() / 2))
+    surface.blit(label, (x0 + Largeur_jeu / 2 - (label.get_width() / 2), y0 + Hauteur_jeu / 2 - label.get_width() / 2))#on centre le texte 
 
 
-def dessine_grille(surface, grille):
+def dessine_grille(surface, grille): #cette fonction sert à quadriller la grille de jeu obtenue via la fonction creation_grille
     for i in range(len(grille)):
         pygame.draw.line(surface, (128, 128, 128), (x0, y0 + i * Taille_bloc), (x0 + Largeur_jeu, y0 + i * Taille_bloc))
         for j in range(len(grille[i])):
@@ -232,7 +241,7 @@ def dessine_grille(surface, grille):
                              (x0 + j * Taille_bloc, y0 + Hauteur_jeu))
 
 
-def clear_rows(grille, positions_statiques):
+def clear_rows(grille, positions_statiques):#cette fonction sert à éliminer les lignes qui sont complétées au fur et à mesure du jeu.
     inc = 0
     for i in range(len(grille) - 1, -1, -1):
         row = grille[i]
@@ -241,7 +250,7 @@ def clear_rows(grille, positions_statiques):
             ind = i
             for j in range(len(row)):
                 try:
-                    del positions_statiques[(j, i)]
+                    del positions_statiques[(j, i)] #on essaye de supprimer l'information que le bloc (i,j) est occupé si elle existe
                 except:
                     continue
 
@@ -250,11 +259,14 @@ def clear_rows(grille, positions_statiques):
             x, y = key
             if y < ind:
                 newKey = (x, y + inc)
-                positions_statiques[newKey] = positions_statiques.pop(key)
-    return (inc)
+                positions_statiques[newKey] = positions_statiques.pop(key) #on supprime les anciennes positions statiques en les réhaussant du nombre de lignes 
+                                                                           #éliminées pour bien conserver l'information qu'il y a des blocs déjà présents sur 
+                                                                           #les lignes autres que celles qui sont éliminées et les garder en positions impossibles 
+                                                                           #à prendre
+    return (inc)#on renvoie le nombre de lignes éliminées
 
 
-def dessine_prochaine_forme(tetrimino, surface):
+def dessine_prochaine_forme(tetrimino, surface): #cette fonction sert à la fois à dessiner le texte "Prochaine Forme" et à afficher le tétrimino qui suivra.
     police = pygame.font.SysFont('comicsans', 30)
     label = police.render('Prochaine Forme', True, (255, 255, 255))
 
@@ -271,7 +283,7 @@ def dessine_prochaine_forme(tetrimino, surface):
 
     surface.blit(label, (sx + 10, sy - 30))
 
-def plus_haut_bloc(grille):
+def plus_haut_bloc(grille): #cette fonction sert à renvoyer la hauteur du plus haut bloc
     ind = len(grille)
     for j in range(len(grille)):
         row = grille[j]
@@ -281,7 +293,7 @@ def plus_haut_bloc(grille):
         ind -= 1
     return ind
 
-def espace_perdu(grille):
+def espace_perdu(grille): #cette fonction sert à renvoyer le nombre de blocs où il n'y a pas de tétrimino présent mais qui ne sont plus accessibles car recouverts
     count = 0
     for j in range (19,plus_haut_bloc(grille)-1, -1):
         row_inf = grille[j]
@@ -295,7 +307,7 @@ def espace_perdu(grille):
     return count
 
 
-def dessine_fenetre(surface, grille, score=0):
+def dessine_fenetre(surface, grille, score=0): #cette fonction sert à créer la fenêtre de jeu où seront affichées la grille de jeu et la prochaine forme.
     surface.fill((0, 0, 0))
 
     pygame.font.init()
@@ -322,7 +334,7 @@ def dessine_fenetre(surface, grille, score=0):
     # pygame.display.update()
 
 
-def main(win):
+def main(win): #cette fonction est la boucle de jeu
     B = 20
     ep2 = 0
     positions_statiques = {}
@@ -345,19 +357,22 @@ def main(win):
         temps.tick()
 
 
-        if temps_de_chute / 1000 > vitesse_chute:
+        if temps_de_chute / 1000 > vitesse_chute: #cette condition est utilisée afin de faire tomber automatiquement les tétriminos
             temps_de_chute = 0
             tetrimino_actuel.y += 1
-            if not (espace_disponible(tetrimino_actuel, grille)) and tetrimino_actuel.y > 0:
+            if not (espace_disponible(tetrimino_actuel, grille)) and tetrimino_actuel.y > 0: #cette condition est utilisée afin de vérifier si la chute du tétrimino 
+                                                                                             #est possible et s'il est bien dans la grille de jeu et pas au-dessus, 
+                                                                                             #s'il ne peut plus tomber alors on change de tétrimino.
                 tetrimino_actuel.y -= 1
                 changement_tetrimino = True
 
-        if temps_de_jeu / 1000 > 5:
+        if temps_de_jeu / 1000 > 5: #plus le jeu avance et plus il est difficile de placer des blocs donc on diminue au cours du jeu la vitesse de chute.
             temps_de_jeu = 0
             if vitesse_chute > 0.12:
                 vitesse_chute -= 0.005
 
-        for event in pygame.event.get():
+        for event in pygame.event.get(): #en fonction de la touche pressée on effectue l'action qui y correspond, les flèches latérales servent à bouger sur les 
+                                         #côtés, celle du bas à descendre et celle du haut à effectuer une rotation.
             if event.type == pygame.QUIT:
                 run = False
 
@@ -384,9 +399,9 @@ def main(win):
         for i in range(len(tetrimino_pos)):
             x, y = tetrimino_pos[i]
             if y > -1:
-                grille[y][x] = tetrimino_actuel.couleur
+                grille[y][x] = tetrimino_actuel.couleur #on colore les endroits de la grille où il y a des tétriminos
 
-        if changement_tetrimino:
+        if changement_tetrimino:#on effectue toutes les actions nécessaires lorsque l'on change de tétrimino
             A,B = B,plus_haut_bloc(grille)
             ep,ep2 = ep2, espace_perdu(grille)
             for pos in tetrimino_pos:

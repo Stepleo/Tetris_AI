@@ -23,22 +23,11 @@ def Run(config_file):
     p.add_reporter(neat.Checkpointer(5))
 
     # Run for up to 100 generations.
-    winner = p.run(evaluation_genome, 1000)
+    winner = p.run(evaluation_genome, 100)
 
     # Display the winning genome.
     print('\nBest genome:\n{!s}'.format(winner))
 
-    node_names = {-2:'Gauche',
-                  -1: 'Droite',
-                  0:'Rotation',
-                  1 :'Position_x',
-                  2:'Postion_y',
-                  3:'Position_alpha'}
-    #visualize.draw_net(config, winner, True, node_names=node_names)
-    #visualize.plot_stats(stats, ylog=False, view=True)
-    #visualize.plot_species(stats, view=True)
-    p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-4')
-    p.run(evaluation_genome, 1000)
 
 
 def plus_haut_bloc(grille):
@@ -46,21 +35,61 @@ def plus_haut_bloc(grille):
     for j in range(len(grille)):
         row = grille[j]
         for espace in row:
-            if espace != (0,0,0):
+            if espace != (0, 0, 0):
                 return ind
         ind -= 1
     return ind
 
-def espace_perdu(grille):
+
+def trous_ajoutees(grille):
     count = 0
-    for j in range (plus_haut_bloc(grille)-1, -1, -1):
-        row_inf = grille[j]
-        row_sup = grille[j-1]
-        for espace in row_inf:
-            if espace == (0,0,0) and row_sup[row_inf.index(espace)] != (0,0,0):
+    for j in range(19,plus_haut_bloc(grille) - 1, -1):
+        row = grille[j]
+        for espace in row:
+            if espace == (0, 0, 0) :
                 count += 1
     return count
 
+def verticalite(grille):
+    c = 0
+    for j in range (9):
+        a,b = 0,0
+        column1 = [grille[i][j] for i in range(20)]
+        column2 = [grille[i][j+1] for i in range(20)]
+        for espace in column1:
+            if espace != (0,0,0):
+                a += 1
+        for espace in column2:
+            if espace != (0,0,0):
+                b += 1
+        c += abs(b-a)
+    return c
+
+def colonnes_vide(grille):
+    c = 0
+    for j in range(10):
+        a = 0
+        for i in [grille[k][j] for k in range(20)]:
+            if i != (0,0,0):
+                a += 1
+        if a != 0:
+            c += 1
+    return c
+
+def voisin(tetrimino_pos,grille):
+    c = 0
+    position_valide = [[(j, i) for j in range(10) if grille[i][j] == (0, 0, 0)] for i in range(20)]
+    position_valide = [j for sub in position_valide for j in sub]
+    for j in range(len(tetrimino_pos)):
+        x,y = tetrimino_pos[j]
+        V = [(x-1,y-1),(x,y-1),(x+1,y-1),(x+1,y),(x+1,y+1),(x,y+1),(x-1,y+1),(x-1,y)]
+        for i in V:
+            if i in tetrimino_pos:
+                continue
+            if i not in position_valide:
+                if i[1] > -1:
+                    c+=1
+        return c
 
 
 
@@ -96,21 +125,11 @@ def evaluation_genome(genomes, config):
             temps_de_jeu = 0
             vitesse_chute = 0.22
             phb2 = 20
-            ep2 = 0
+            ta2 = 0
             output = nets[tetrimino_training.index(t)].activate((t.x, t.y, t.rotation))
             temps_de_chute += temps.get_rawtime()
             temps_de_jeu += temps.get_rawtime()
             temps.tick()
-
-            #if temps_de_jeu / 1000 > 5:
-            #    temps_de_jeu = 0
-            #    if vitesse_chute > 0.12:
-            #        vitesse_chute -= 0.005
-
-            #for event in pygame.event.get():
-            #    if event.type == pygame.QUIT:
-            #        T.run = False
-
 
             if temps_de_chute > 0:
                 temps_de_chute = 0
@@ -148,43 +167,45 @@ def evaluation_genome(genomes, config):
 
 
             tetrimino_pos = T.conversion_format(t)
+            
+            if voisin(tetrimino_pos,grille) >= 5: #on récompense l'IA si elle arrive à avoir beaucoup de voisins pour l'orienter vers la complétion de lignes.
+                g[tetrimino_training.index(t)].fitness += 5
+            else:
+                g[tetrimino_training.index(t)].fitness -= 1
 
             for j in range(len(tetrimino_pos)):
                 x, y = tetrimino_pos[j]
                 if y > -1:
                     grille[y][x] = t.couleur
 
-            if Fin == True:
-                if t.y >= 10:
-                    g[tetrimino_training.index(t)].fitness += 50
+            if Fin:
                 phb,phb2 = phb2,plus_haut_bloc(grille)
-                ep,ep2 = ep2,espace_perdu(grille)
+                ta,ta2 = ep2,trous_ajoutees(grille)
                 for pos in tetrimino_pos:
                     p = (pos[0], pos[1])
                     positions_statiques[p] = t.couleur
                 Fin = False
                 g[tetrimino_training.index(t)].fitness += T.clear_rows(grille, positions_statiques) * 20
-                if T.clear_rows(grille, positions_statiques) > 0:
-                    print("Reussi")
                 grille = T.creation_grille(positions_statiques)
-                if phb2 > phb:
-                    #g[tetrimino_training.index(t)].fitness -= 10
-                    print("dmg")
-                #if ep2 > ep:
-                    #g[tetrimino_training.index(t)].fitness -= 20
-                #    print("ducon")
+                g[tetrimino_training.index(t)].fitness -= max(0,ta2 - ta)*5 
+
+                g[tetrimino_training.index(t)].fitness -= max(0,phb2 - phb)*20
+
+                g[tetrimino_training.index(t)].fitness -= verticalite(grille)*10
+
+                g[tetrimino_training.index(t)].fitness
+                -= colonnes_vide(grille)*10
+                
                 run = False
+                
+                
             T.dessine_fenetre(surface, grille)
             pygame.display.update()
+            
         nets.pop(tetrimino_training.index(t))
         g.pop(tetrimino_training.index(t))
         tetrimino_training.pop(tetrimino_training.index(t))
 
-        #if check_lost(positions_statiques):
-        #   dessine_texte_milieu("PERDU", 80, (255, 255, 255), win)
-        #    pygame.display.update()
-        #    pygame.time.delay(1500)
-        #    run = False
 
 if __name__ == '__main__':
     # Determine path to configuration file. This path manipulation is
