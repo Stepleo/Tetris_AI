@@ -15,7 +15,6 @@ def Run(config_file):
                          config_file)
 
     # On crée notre population, qui est l'objet le plus important lorsque l'on utilise NEAT.
-    #p = neat.checkpoint.Checkpointer.restore_checkpoint('neat-checkpoint-4')
     p = neat.Population(config)
     # On crée un rapporteur d'écart-type pour montrer la progression de nos générations dans le terminal.
     p.add_reporter(neat.StdOutReporter(True))
@@ -69,7 +68,7 @@ def verticalite(grille):#cette fonction sert à déterminer la différence de ha
             if espace != (0,0,0):
                 b += 1
         c += abs(b-a)
-    return c #on renvoie la valeur absolue de la différence.
+    return c #on renvoie la valeur absolue de la somme des différences.
 
 def colonnes_vide(grille): # Cette fonction porte bien son nom.
     c = 0
@@ -117,7 +116,7 @@ def evaluation_genome(genome, config):
     score = 0
     pygame.init()
 
-
+    #création de notre neurone à partir du genome
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitness = 0
 
@@ -130,7 +129,7 @@ def evaluation_genome(genome, config):
         temps_de_jeu += temps.get_rawtime()
         temps.tick(120)
 
-
+        #On récupère la réponse du neurone aux informations qu'on lui donne dans une liste dont la taille est définit dans Configuration_AI
         output = net.activate((tetrimino_actuel.x, tetrimino_actuel.y, tetrimino_actuel.rotation))
 
 
@@ -223,9 +222,8 @@ def evaluation_genome(genome, config):
 
 
 if __name__ == '__main__':
-    # Determine path to configuration file. This path manipulation is
-    # here so that the script will run successfully regardless of the
-    # current working directory.
+    # Détermine l'emplacement du fichier de configuration.
+    # On a eu des problèmes avec cette commande lorsqu'on est pas sous linux
     local_dir = os.path.dirname(__file__)
     chemin_config = os.path.join(local_dir, 'Configuration_AI')
     Run(chemin_config)
