@@ -68,7 +68,7 @@ def verticalite(grille):#cette fonction sert à déterminer la différence de ha
             if espace != (0,0,0):
                 b += 1
         c += abs(b-a)
-    return c #on renvoie la valeur absolue de la somme des différences.
+    return c #on renvoie la somme des valeurs absolues des différences.
 
 def colonnes_vide(grille): # Cette fonction porte bien son nom.
     c = 0
