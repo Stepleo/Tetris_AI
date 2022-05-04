@@ -9,15 +9,14 @@ import time
 Core = 0
 
 def Run(config_file):
-    # Load configuration.
+    # On charge la configuration qu'utilisera notre intelligence artificielle pour sa reproduction.
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_file)
 
-    # Create the population, which is the top-level object for a NEAT run.
-    #p = neat.checkpoint.Checkpointer.restore_checkpoint('neat-checkpoint-4')
+    # On crée notre population, qui est l'objet le plus important lorsque l'on utilise NEAT.
     p = neat.Population(config)
-    # Add a stdout reporter to show progress in the terminal.
+    # On crée un rapporteur d'écart-type pour montrer la progression de nos générations dans le terminal.
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
@@ -27,14 +26,16 @@ def Run(config_file):
         corecount = multiprocessing.cpu_count()
     else:
         corecount = Core
-    pe = neat.ParallelEvaluator(1, evaluation_genome)
-    # Run for up to 100 generations.
+    pe = neat.ParallelEvaluator(corecount, evaluation_genome)
+    # On choisit de l'exécuter pour 1000 générations.
     winner = p.run(pe.evaluate, 1000)
 
-    # Display the winning genome.
+    # On affiche le meilleur génome.
     print('\nBest genome:\n{!s}'.format(winner))
 
 
+
+# Les 5 fonctions suivantes servent à déterminer l'évolution de la partie à chaque action de l'IA et donc à la noter plus tard.
 def plus_haut_bloc(grille):
     ind = len(grille)
     for j in range(len(grille)):
@@ -46,7 +47,7 @@ def plus_haut_bloc(grille):
     return ind
 
 
-def trous_ajoutees(grille):
+def trous_ajoutees(grille): #cette fonction sert à déterminer le nombre de trous qui ont été ajoutés, c'est-à-dire le nombre d'espaces inaccessibles car recouverts
     count = 0
     for j in range(19,plus_haut_bloc(grille) - 1, -1):
         row = grille[j]
@@ -55,11 +56,11 @@ def trous_ajoutees(grille):
                 count += 1
     return count
 
-def verticalite(grille):
+def verticalite(grille):#cette fonction sert à déterminer la différence de hauteur entre deux colonnes adjacentes.
     c = 0
     for j in range (9):
         a,b = 0,0
-        column1 = [grille[i][j] for i in range(20)]
+        column1 = [grille[i][j] for i in range(20)] # On prend nos deux colonnes adjacentes et on compte le nombre de blocs qui y sont présents.
         column2 = [grille[i][j+1] for i in range(20)]
         for espace in column1:
             if espace != (0,0,0):
@@ -68,9 +69,9 @@ def verticalite(grille):
             if espace != (0,0,0):
                 b += 1
         c += abs(b-a)
-    return c
+    return c #on renvoie la somme des valeurs absolues des différences.
 
-def colonnes_vide(grille):
+def colonnes_vide(grille): # Cette fonction porte bien son nom.
     c = 0
     for j in range(10):
         a = 0
@@ -81,7 +82,7 @@ def colonnes_vide(grille):
             c += 1
     return c
 
-def voisin(tetrimino_pos,grille):
+def voisin(tetrimino_pos,grille):# Cette fonction renvoie le nombre de blocs adjacents au tétrimino.
     c = 0
     position_valide = [[(j, i) for j in range(10) if grille[i][j] == (0, 0, 0)] for i in range(20)]
     position_valide = [j for sub in position_valide for j in sub]
@@ -95,7 +96,8 @@ def voisin(tetrimino_pos,grille):
                 if i[1] > -1:
                     c+=1
         return c
-
+    
+#Fonction qui va permettre de noter les différentes possibilités de position des tetriminos
 def simulation(tetrimino,direction,orientation,grille):
     ta = trous_ajoutees(grille)
     phb = plus_haut_bloc(grille)
@@ -119,6 +121,7 @@ def simulation(tetrimino,direction,orientation,grille):
     hauteur_ajoutee = plus_haut_bloc(grille) - phb
     remplissage_colonne = colonnes_vide(grille) - cv
     applanissement = verticalite(grille) - v
+    #On renvoit pour la position choisit les infos qui correspondent aux pénalités dans les IA précédentes
     return [nb_voisin,nouveau_trous,hauteur_ajoutee,remplissage_colonne,applanissement]
 
 
@@ -162,6 +165,7 @@ def evaluation_genome(genome, config):
 
 
         if c == 0:
+            #On simule toutes les positions possibles, une seule fois
             c += 1
             direction = [i for i in range(10)]
             orientation = [k for k in range(4)]
@@ -174,9 +178,10 @@ def evaluation_genome(genome, config):
 
             for j in choix:
                 etat = choix[j]
-                score = net.activate(etat)
+                score = net.activate(etat)#On utilise la réponse du neurone pour attribuer une note à chaque position
                 choix[j] = score
-
+                
+            #On sélectionne le placement avec la meilleure note
             meilleur_placement = None
             meilleur_score = None
             for j in choix:
@@ -204,7 +209,7 @@ def evaluation_genome(genome, config):
             if y > -1:
                 grille[y][x] = tetrimino_actuel.couleur
 
-        if changement_tetrimino == True:
+        if changement_tetrimino:
             for pos in tetrimino_pos:
                 p = (pos[0], pos[1])
                 positions_statiques[p] = tetrimino_actuel.couleur
@@ -226,9 +231,8 @@ def evaluation_genome(genome, config):
 
 
 if __name__ == '__main__':
-    # Determine path to configuration file. This path manipulation is
-    # here so that the script will run successfully regardless of the
-    # current working directory.
+    # Détermine l'emplacement du fichier de configuration.
+    # On a eu des problèmes avec cette commande lorsqu'on est pas sous linux
     local_dir = os.path.dirname(__file__)
     chemin_config = os.path.join(local_dir, 'Configuration_AI_3')
     Run(chemin_config)
